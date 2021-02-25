@@ -59,6 +59,7 @@ static void zoom(const Arg *);
 static void zoomabs(const Arg *);
 static void zoomreset(const Arg *);
 static void ttysend(const Arg *);
+static void togglealpha(const Arg *);
 
 /* config.h for applying patches and the configuration. */
 #include "config.h"
@@ -152,6 +153,7 @@ static void ximinstantiate(Display *, XPointer, XPointer);
 static void ximdestroy(XIM, XPointer, XPointer);
 static int xicdestroy(XIC, XPointer, XPointer);
 static void xinit(int, int);
+static void alphatogglerefresh(void);
 static void cresize(int, int);
 static void xresize(int, int);
 static void xhints(void);
@@ -806,6 +808,39 @@ xloadcols(void)
 	loaded = 1;
 }
 
+void
+alphatogglerefresh(void)
+{
+	static int   inited = 0;
+	static float preservedAlpha = 1;
+
+	if (inited == 0) {
+		preservedAlpha = alpha;
+		inited = 1;
+	}
+
+	if (alpha_enabled == 1) {
+		alpha = preservedAlpha;
+	} else {
+		preservedAlpha = alpha;
+		alpha = 1;
+	}
+}
+
+void
+togglealpha(const Arg *dummy)
+{
+	if (alpha_enabled == 1) {
+		alpha_enabled = 0;
+	} else {
+		alpha_enabled = 1;
+	}
+
+	alphatogglerefresh();
+	xloadcols();
+	redraw();
+}
+
 int
 xsetcolorname(int x, const char *name)
 {
@@ -1136,6 +1171,9 @@ xinit(int cols, int rows)
 
 	usedfont = (opt_font == NULL)? font : opt_font;
 	xloadfonts(usedfont, 0);
+
+	/* alpha */
+	alphatogglerefresh();
 
 	/* colors */
 	xw.cmap = XCreateColormap(xw.dpy, parent, xw.vis, None);
